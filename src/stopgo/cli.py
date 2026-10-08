@@ -120,6 +120,10 @@ def cmd_windows(a: argparse.Namespace, _: argparse.ArgumentParser) -> None:
 
 def cmd_static(a: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
     cfg = _rtk_config(a, parser)
+    try:
+        rtklib.find_rnx2rtkp(a.exe)
+    except FileNotFoundError as e:
+        parser.error(str(e))
     if a.save_conf:
         cfg.write(a.save_conf)
     w = _load_windows(a)

@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 
 import pandas as pd
@@ -19,6 +20,7 @@ def test_static_requires_base_position(pd_file: Path) -> None:
 
 def test_static_config_flags(pd_file: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(rtklib, "rinex_span", lambda p: (None, None))
+    monkeypatch.setattr(rtklib, "find_rnx2rtkp", lambda exe: exe)  # no RTKLIB needed here
     conf = tmp_path / "eff.conf"
     cli.main(["static", str(pd_file), "--rover", "r", "--base", "b", "--nav", "n",
               "--base-pos", "46", "9", "2300", "--systems", "GE", "--elmask", "10",
@@ -27,3 +29,11 @@ def test_static_config_flags(pd_file: Path, tmp_path: Path, monkeypatch: pytest.
     assert opts["pos1-navsys"] == "9" and float(opts["pos1-elmask"]) == 10 and float(opts["pos2-arelmask"]) == 10
     assert opts["pos1-snrmask_r"] == "on" and opts["ant2-pos3"] == "2300.0000"
     assert opts["pos2-arthres"] == "3"  # default untouched
+
+
+def test_static_without_rnx2rtkp(pd_file: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    monkeypatch.setattr(shutil, "which", lambda exe: None)
+    with pytest.raises(SystemExit):
+        cli.main(["static", str(pd_file), "--rover", "r", "--base", "b", "--nav", "n",
+                  "--base-pos", "46", "9", "2300"])
+    assert "rnx2rtkp" in capsys.readouterr().err

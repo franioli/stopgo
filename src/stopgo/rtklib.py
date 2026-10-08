@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import math
+import shutil
 import subprocess
+import sys
 import tempfile
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -55,6 +57,33 @@ DEFAULT_OPTIONS: dict[str, str] = {
     "ant1-anttype": "",
     "ant2-anttype": "",
 }
+
+
+RTKLIB_URL = "https://github.com/rtklibexplorer/RTKLIB"
+
+
+def install_hint() -> str:
+    """How to install rnx2rtkp on the current platform."""
+    if sys.platform == "win32":
+        return (
+            f"Download an RTKLIB release (demo5 recommended: {RTKLIB_URL}/releases), unzip it, and add "
+            "the folder containing rnx2rtkp.exe to your PATH, or pass --exe C:\\path\\to\\rnx2rtkp.exe."
+        )
+    return (
+        f"Build it from source (demo5 recommended):\n"
+        f"  git clone {RTKLIB_URL}\n"
+        "  cd RTKLIB/app/consapp/rnx2rtkp/gcc && make && sudo make install\n"
+        "or copy the binary to a folder on your PATH. Debian/Ubuntu may also offer an older build "
+        "(sudo apt install rtklib). Alternatively pass --exe /path/to/rnx2rtkp."
+    )
+
+
+def find_rnx2rtkp(exe: str = "rnx2rtkp") -> str:
+    """Resolve the rnx2rtkp executable; raise FileNotFoundError with install hints if missing."""
+    path = shutil.which(exe)
+    if path is None:
+        raise FileNotFoundError(f"'{exe}' not found on PATH. {install_hint()}")
+    return path
 
 
 def navsys_mask(systems: str) -> int:
@@ -145,6 +174,7 @@ def run_rnx2rtkp(
     exe: str = "rnx2rtkp",
 ) -> Path:
     """Run rnx2rtkp and return the output .pos path."""
+    exe = find_rnx2rtkp(exe)
     with tempfile.TemporaryDirectory() as tmp:
         conf = config.write(Path(tmp) / "rtk.conf")
         cmd = build_command(conf, rover, base, nav, out, start, end, exe)

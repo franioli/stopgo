@@ -8,8 +8,16 @@ Supported surveys: Stonex Cube-a projects (`.PD`) and Emlid Flow point exports (
 
 ## Install
 
-Requires Python >= 3.10. The `static` command also needs RTKLIB's `rnx2rtkp` on the `PATH`
-(or pass `--exe /path/to/rnx2rtkp`).
+Requires Python >= 3.10. The `static` command also needs RTKLIB's `rnx2rtkp`, which `uv` cannot install:
+
+- **Linux / macOS**: build the [demo5 fork](https://github.com/rtklibexplorer/RTKLIB) with
+  `cd RTKLIB/app/consapp/rnx2rtkp/gcc && make && sudo make install`
+  (Debian/Ubuntu also offer an older build: `sudo apt install rtklib`).
+- **Windows**: download a release from the [demo5 releases](https://github.com/rtklibexplorer/RTKLIB/releases)
+  and add the folder containing `rnx2rtkp.exe` to your `PATH`.
+- Or point to any binary with `--exe /path/to/rnx2rtkp`. If it is missing, `stopgo static` stops with these hints.
+
+`windows` and `extract` do not need RTKLIB. Developed and tested with `rnx2rtkp ver.EX 2.5.1`.
 
 ```sh
 uv tool install git+https://github.com/franioli/stopgo   # the `stopgo` command

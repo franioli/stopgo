@@ -1,3 +1,5 @@
+import shutil
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -80,3 +82,22 @@ def test_header_llh(tmp_path: Path) -> None:
     assert lat == pytest.approx(46.28901474, abs=1e-8)
     assert lon == pytest.approx(9.61744532, abs=1e-8)
     assert h == pytest.approx(3220.0429 + 0.05, abs=1e-3)  # antenna delta H added
+
+
+def test_find_rnx2rtkp_present(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(shutil, "which", lambda exe: f"/opt/bin/{exe}")
+    assert rtklib.find_rnx2rtkp() == "/opt/bin/rnx2rtkp"
+
+
+@pytest.mark.parametrize("platform, expected", [("linux", "make"), ("darwin", "make"), ("win32", "rnx2rtkp.exe")])
+def test_find_rnx2rtkp_missing_gives_install_hint(monkeypatch: pytest.MonkeyPatch, platform: str, expected: str) -> None:
+    monkeypatch.setattr(shutil, "which", lambda exe: None)
+    monkeypatch.setattr(sys, "platform", platform)
+    with pytest.raises(FileNotFoundError, match="not found") as e:
+        rtklib.find_rnx2rtkp()
+    assert expected in str(e.value) and rtklib.RTKLIB_URL in str(e.value)
+
+
+@pytest.mark.skipif(shutil.which("rnx2rtkp") is None, reason="rnx2rtkp not installed")
+def test_rnx2rtkp_installed_on_this_machine() -> None:
+    assert Path(rtklib.find_rnx2rtkp()).exists()
