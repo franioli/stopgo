@@ -1,0 +1,11 @@
+__pycache__/
+.venv/
+_old/
+
+# sample data: parked originals and RINEX files too large for git
+data/_old/
+data/stonex_s999/rover/*.26O
+data/stonex_s999/base/*.26o
+
+# not yet supported (Emlid Reach RS2 samples)
+data/emlid_reach_rs2/
