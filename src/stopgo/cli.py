@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import warnings
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -80,10 +81,16 @@ def _read_survey(path: Path) -> pd.DataFrame:
 
 
 def _load_windows(a: argparse.Namespace) -> pd.DataFrame:
-    w = processing.occupation_windows(_read_survey(a.survey), a.trim, a.leap)
+    occ = _read_survey(a.survey)
+    w = processing.occupation_windows(occ, a.trim, a.leap)
     if a.ant_h is not None:
         w["ant_h"] = a.ant_h
     if a.points:
+        unknown = sorted(set(a.points) - set(occ["name"].astype(str)))
+        if unknown:
+            warnings.warn(
+                f"points not in the survey: {', '.join(unknown)}", stacklevel=2
+            )
         w = w[w["name"].isin(a.points)].reset_index(drop=True)
     return w
 
@@ -92,8 +99,12 @@ def _rtk_config(
     a: argparse.Namespace, parser: argparse.ArgumentParser
 ) -> rtklib.RtkConfig:
     cfg = rtklib.RtkConfig.from_file(a.conf) if a.conf else rtklib.RtkConfig()
+    try:
+        navsys = rtklib.navsys_mask(a.systems) if a.systems else None
+    except ValueError as e:
+        parser.error(f"--systems: {e}")
     flags = {
-        "pos1-navsys": a.systems and rtklib.navsys_mask(a.systems),
+        "pos1-navsys": navsys,
         "pos1-frequency": a.freq,
         "pos1-elmask": a.elmask,
         "pos2-arelmask": a.elmask,
@@ -242,7 +253,12 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     a = parser.parse_args(argv)
-    a.func(a, parser)
+    with warnings.catch_warnings():  # restores the default hook on exit
+        warnings.simplefilter("always")
+        warnings.showwarning = lambda m, *_, **__: print(
+            f"stopgo: warning: {m}", file=sys.stderr
+        )
+        a.func(a, parser)
     return 0
 
 

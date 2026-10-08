@@ -31,6 +31,17 @@ def test_static_config_flags(pd_file: Path, tmp_path: Path, monkeypatch: pytest.
     assert opts["pos2-arthres"] == "3"  # default untouched
 
 
+def test_bad_systems_is_a_usage_error(pd_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit):
+        cli.main(["static", str(pd_file), "--rover", "r", "--base", "b", "--nav", "n", "--systems", "GX"])
+    assert "--systems" in capsys.readouterr().err
+
+
+def test_unknown_point_warns(pd_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    cli.main(["windows", str(pd_file), "--points", "P1", "NOPE"])
+    assert "points not in the survey: NOPE" in capsys.readouterr().err
+
+
 def test_static_without_rnx2rtkp(pd_file: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     monkeypatch.setattr(shutil, "which", lambda exe: None)
     with pytest.raises(SystemExit):

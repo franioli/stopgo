@@ -6,6 +6,7 @@ name, start, end (GPST), ant_h and optionally field_lat/field_lon/field_h.
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
@@ -24,7 +25,14 @@ def occupation_windows(
     w = occ.copy()
     w["start"] = rtklib.utc_to_gpst(w.t0_utc, leap_s) + pd.Timedelta(seconds=trim_s)
     w["end"] = rtklib.utc_to_gpst(w.t1_utc, leap_s) - pd.Timedelta(seconds=trim_s)
-    return w[w.end > w.start].reset_index(drop=True)
+    ok = w.end > w.start  # also False for missing times
+    if not ok.all():
+        warnings.warn(
+            f"{(~ok).sum()} window(s) dropped (empty after trimming or missing times): "
+            + ", ".join(w.loc[~ok, "name"].astype(str)),
+            stacklevel=2,
+        )
+    return w[ok].reset_index(drop=True)
 
 
 def assign_rover(
@@ -141,7 +149,12 @@ def add_ground_and_checks(res: pd.DataFrame, windows: pd.DataFrame) -> pd.DataFr
     out["h_ground"] = out.h_ant - out.ant_h
     field_cols = ["field_lat", "field_lon", "field_h"]
     if set(field_cols) <= set(windows.columns):
-        out = out.merge(windows[["name", *field_cols]], on="name", how="left")
+        # a re-occupied point appears twice: pair the n-th result with the n-th window of that name
+        out["_k"] = out.groupby("name").cumcount()
+        fields = windows[["name", *field_cols]].assign(
+            _k=windows.groupby("name").cumcount()
+        )
+        out = out.merge(fields, on=["name", "_k"], how="left").drop(columns="_k")
         e, n = _en_offsets(
             out.lat.to_numpy(),
             out.lon.to_numpy(),

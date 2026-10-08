@@ -186,18 +186,48 @@ def run_rnx2rtkp(
     return out
 
 
-def read_pos(paths: Path | Sequence[Path]) -> pd.DataFrame:
-    """Read one or more RTKLIB llh .pos files into a time-sorted DataFrame (column `t` in GPST)."""
-    paths = [paths] if isinstance(paths, Path) else list(paths)
-    df = pd.concat(
-        [
-            pd.read_csv(p, comment="%", sep=r"\s+", header=None, names=POS_COLS)
-            for p in paths
-        ],
-        ignore_index=True,
+def _pos_time_system(path: Path) -> str:
+    """Time system ('GPST' or 'UTC') of a .pos file; raise if it is not a decimal-degree llh file."""
+    with path.open() as f:
+        for line in f:
+            if not line.startswith("%"):
+                break
+            if "x-ecef" in line:
+                raise ValueError(
+                    f"{path}: ECEF .pos files are not supported, export lat/lon/height"
+                )
+            if "latitude(" in line:
+                if "latitude(deg)" not in line:
+                    raise ValueError(
+                        f"{path}: latitude/longitude must be in decimal degrees"
+                    )
+                tsys = line.lstrip("% ").split()[0].upper()
+                if tsys not in ("GPST", "UTC"):
+                    raise ValueError(
+                        f"{path}: unsupported time system {tsys}, use GPST or UTC"
+                    )
+                return tsys
+    return "GPST"  # no column header: assume the RTKLIB default
+
+
+def read_pos(
+    paths: Path | str | Sequence[Path | str], leap_s: int = GPST_UTC_OFFSET_S
+) -> pd.DataFrame:
+    """Read one or more RTKLIB llh .pos files into a time-sorted DataFrame (column `t` in GPST).
+
+    UTC files are shifted to GPST by `leap_s`; ECEF or non-degree files raise ValueError.
+    """
+    paths = (
+        [Path(paths)] if isinstance(paths, (str, Path)) else [Path(p) for p in paths]
     )
-    df["t"] = pd.to_datetime(df.date + " " + df.time)
-    return df.sort_values("t").reset_index(drop=True)
+    frames = []
+    for p in paths:
+        df = pd.read_csv(p, comment="%", sep=r"\s+", header=None, names=POS_COLS)
+        df["t"] = pd.to_datetime(df.date + " " + df.time)
+        if _pos_time_system(p) == "UTC":
+            df["t"] = utc_to_gpst(df["t"], leap_s)
+        frames.append(df)
+    return pd.concat(frames, ignore_index=True).sort_values("t").reset_index(drop=True)
 
 
 def solve_static(
@@ -220,26 +250,37 @@ def solve_static(
     return pos.iloc[-1] if len(pos) else None
 
 
-def rinex_span(obs: Path) -> tuple[pd.Timestamp | None, pd.Timestamp | None]:
-    """First and last epoch (GPST) of a RINEX 3 observation file."""
+def rinex_span(obs: Path | str) -> tuple[pd.Timestamp, pd.Timestamp]:
+    """First and last epoch (GPST) of a RINEX 3 observation file.
+
+    Event records without a timestamp are skipped; raises ValueError if no epoch is found.
+    """
     first = last = None
-    with obs.open() as f:
+    with Path(obs).open() as f:
         for line in f:
-            if line.startswith("> "):
-                last = pd.to_datetime(
-                    " ".join(line[2:29].split()[:6]), format="%Y %m %d %H %M %S.%f"
-                )
-                first = first if first is not None else last
+            if not line.startswith(">"):
+                continue
+            try:
+                y, mo, d, h, mi, s = line[1:].split()[:6]
+                last = pd.Timestamp(
+                    int(y), int(mo), int(d), int(h), int(mi)
+                ) + pd.Timedelta(seconds=float(s))
+            except ValueError:
+                continue
+            if first is None:
+                first = last
+    if first is None or last is None:
+        raise ValueError(f"no RINEX 3 epochs found in {obs}")
     return first, last
 
 
-def header_llh(obs: Path) -> tuple[float, float, float]:
+def header_llh(obs: Path | str) -> tuple[float, float, float]:
     """WGS84 lat, lon [deg] and ellipsoidal height [m] of the antenna from the RINEX header.
 
     Uses `APPROX POSITION XYZ` plus the vertical `ANTENNA: DELTA H/E/N`, if present.
     """
     xyz, dh = None, 0.0
-    with obs.open() as f:
+    with Path(obs).open() as f:
         for line in f:
             if "APPROX POSITION XYZ" in line:
                 xyz = tuple(map(float, line[:42].split()))

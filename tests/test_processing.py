@@ -17,7 +17,8 @@ def test_occupation_windows_offset_and_trim(pd_file: Path) -> None:
     w = processing.occupation_windows(occ)
     assert w.start.iloc[0] == pd.Timestamp("2026-09-06 08:00:18")  # UTC + 18 s
     assert w.end.iloc[0] == pd.Timestamp("2026-09-06 08:00:20")
-    assert processing.occupation_windows(occ, trim_s=1).empty  # windows of <=2 s collapse
+    with pytest.warns(UserWarning, match="dropped"):  # windows of <=2 s collapse
+        assert processing.occupation_windows(occ, trim_s=1).empty
 
 
 def test_assign_rover() -> None:
@@ -59,3 +60,12 @@ def test_process_static(monkeypatch: pytest.MonkeyPatch, windows: pd.DataFrame) 
     r = res.set_index("name")
     assert r.loc["P1"].fixed and r.loc["P1"].source == "rov.26O"
     assert pd.isna(r.loc["P2"].source)  # outside rover span
+
+
+def test_add_ground_and_checks_keeps_reoccupied_points() -> None:
+    w = pd.DataFrame({"name": ["A", "A"], "ant_h": [2.0, 2.0], "field_lat": [46.0, 46.0],
+                      "field_lon": [9.0, 9.0], "field_h": [100.0, 101.0]})
+    res = pd.DataFrame({"name": ["A", "A"], "ant_h": [2.0, 2.0], "lat": [46.0, 46.0], "lon": [9.0, 9.0],
+                        "h_ant": [102.0, 103.0]})
+    out = processing.add_ground_and_checks(res, w)
+    assert len(out) == 2 and list(out.dh_field.round(6)) == [0.0, 0.0]  # each paired with its own field_h

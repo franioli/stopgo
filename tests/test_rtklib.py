@@ -49,6 +49,37 @@ def test_read_pos_sorted_concat(tmp_path: Path) -> None:
     assert df.t.iloc[0] == pd.Timestamp("2026-09-06 08:00:00")
 
 
+def test_rinex_span_skips_event_records(tmp_path: Path) -> None:
+    ev = ">                              3  4\n  some header record\n"
+    f = tmp_path / "r.26O"
+    f.write_text("     3.03  OBSERVATION DATA\n   END OF HEADER\n" + ev
+                 + "> 2026 09 06 08 48 40.0000000  0 20\nG01 ...\n"
+                 + "> 2026 09 06 08 48 41.5000000  0 20\nG01 ...\n" + ev)
+    assert rtklib.rinex_span(f) == (pd.Timestamp("2026-09-06 08:48:40"), pd.Timestamp("2026-09-06 08:48:41.5"))
+    empty = tmp_path / "e.26O"
+    empty.write_text("     3.03  OBSERVATION DATA\n   END OF HEADER\n" + ev)
+    with pytest.raises(ValueError, match="no RINEX 3 epochs"):
+        rtklib.rinex_span(empty)
+
+
+def test_read_pos_checks_header(tmp_path: Path) -> None:
+    ecef = tmp_path / "x.pos"
+    ecef.write_text("%  GPST   x-ecef(m)   y-ecef(m)   z-ecef(m)  Q\n" + pos_line("08:00:00", 46, 9, 100, 1))
+    with pytest.raises(ValueError, match="ECEF"):
+        rtklib.read_pos(ecef)
+    utc = tmp_path / "u.pos"
+    utc.write_text("%  UTC   latitude(deg) longitude(deg)  height(m)\n" + pos_line("08:00:00", 46, 9, 100, 1))
+    assert rtklib.read_pos(utc).t.iloc[0] == pd.Timestamp("2026-09-06 08:00:18")  # UTC -> GPST
+
+
+def test_str_paths_accepted(tmp_path: Path, pd_file: Path) -> None:
+    from stopgo import stonex
+    f = tmp_path / "a.pos"
+    f.write_text(POS_HEADER + pos_line("08:00:00", 46, 9, 100, 1))
+    assert len(rtklib.read_pos(str(f))) == 1
+    assert len(stonex.read_occupations(str(pd_file))) == 2
+
+
 def test_rinex_span(tmp_path: Path) -> None:
     f = tmp_path / "r.26O"
     f.write_text("     3.02  OBSERVATION DATA\n   END OF HEADER\n"

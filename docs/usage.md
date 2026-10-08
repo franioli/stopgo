@@ -14,7 +14,8 @@ joins the two: it turns each occupation into a window in GPST, then gets one coo
 Use `extract` when you already have a kinematic solution (e.g. from Emlid Studio, RTKLIB or the vendor software)
 and `static` when you want a fresh solution with your own settings. Comparing the two is a good consistency check.
 
-Inputs: the survey is a Stonex `.PD` or an Emlid Flow `.csv`; the trajectory is an RTKLIB-style llh `.pos`;
+Inputs: the survey is a Stonex `.PD` or an Emlid Flow `.csv`; the trajectory is an RTKLIB-style llh `.pos`
+(latitude/longitude in decimal degrees, GPST or UTC time; ECEF or dms files are rejected);
 RINEX obs/nav are standard RINEX 3 files. Sample files for each receiver are in `data/`.
 
 ## Options shared by all commands
@@ -86,6 +87,12 @@ They are layered, later ones win:
 `--save-conf FILE` writes the effective configuration so a run can be reproduced with plain `rnx2rtkp`.
 `--exe PATH` selects a specific `rnx2rtkp` binary. The `--systems` choice must match what the rover tracks
 (e.g. the Stonex S80G has no Galileo/BeiDou, so use `--systems GR`).
+
+## Warnings
+
+`stopgo` prints `stopgo: warning: ...` (and the Python API raises a `UserWarning`) when windows are dropped
+(empty after `--trim`, or missing times in the survey) and when `--points` names a point that is not in the survey.
+Re-occupied points (same name twice) are kept as separate rows.
 
 ## Output columns
 

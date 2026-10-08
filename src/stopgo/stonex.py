@@ -9,7 +9,8 @@ from pathlib import Path
 import pandas as pd
 
 
-def _connect(pd_file: Path) -> sqlite3.Connection:
+def _connect(pd_file: Path | str) -> sqlite3.Connection:
+    pd_file = Path(pd_file)
     if not pd_file.is_file():
         raise FileNotFoundError(pd_file)
     return sqlite3.connect(f"file:{pd_file}?mode=ro", uri=True)
