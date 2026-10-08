@@ -1,0 +1,19 @@
+[project]
+name = "stopgo"
+version = "0.1.0"
+description = "Stop-and-go GNSS post-processing with RTKLIB and Stonex Cube-a projects"
+requires-python = ">=3.10"
+dependencies = ["numpy", "pandas>=2"]
+
+[project.scripts]
+stopgo = "stopgo.cli:main"
+
+[dependency-groups]
+dev = ["pytest"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
