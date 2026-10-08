@@ -73,10 +73,10 @@ def _save(df: pd.DataFrame, out: Path | None) -> None:
 def _read_survey(path: Path) -> pd.DataFrame:
     """Occupations from a Stonex .PD project or an Emlid .csv export."""
     readers = {".pd": stonex.read_occupations, ".csv": emlid.read_occupations}
-    try:
-        return readers[path.suffix.lower()](path)
-    except KeyError:
+    reader = readers.get(path.suffix.lower())
+    if reader is None:
         raise SystemExit(f"stopgo: unsupported survey file {path} (use .PD or .csv)")
+    return reader(path)
 
 
 def _load_windows(a: argparse.Namespace) -> pd.DataFrame:

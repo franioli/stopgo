@@ -33,16 +33,15 @@ stopgo extract survey.PD kinematic.pos            # average a kinematic .pos ins
 stopgo static  survey.PD --rover rover.obs --base base.obs --nav base.nav rover.nav
 ```
 
-- `survey` is a Stonex `.PD` or an Emlid `.csv`.
-- `static` runs `rnx2rtkp` once per window. The base position is read from the base RINEX header
-  (`APPROX POSITION XYZ` + antenna delta H) unless you pass `--base-pos LAT LON H`.
-- Common options: `--points`, `--trim` (seconds dropped at each window end), `--ant-h`, `-o out.csv`.
-  `stopgo static --help` lists the RTKLIB options.
-- Output columns include the fix status, ratio, standard deviations, the antenna and ground heights, and the
-  difference from the field solution.
+`survey` is a Stonex `.PD` or an Emlid `.csv`. `static` reads the base position from the base RINEX header unless
+you pass `--base-pos`. Shared options: `--points`, `--trim`, `--ant-h`, `--leap`, `-o out.csv`.
 
-Python API: `stopgo.stonex`, `stopgo.emlid` (survey readers), `stopgo.rtklib` (config, `rnx2rtkp`, `.pos`
-reader), `stopgo.processing` (windows to coordinates).
+The full guide (every option, RTKLIB settings, output columns, Python API, troubleshooting) is in
+[docs/usage.md](docs/usage.md).
+
+## Other receivers
+
+See [docs/adding-a-receiver.md](docs/adding-a-receiver.md) for how to add a survey reader.
 
 ## Sample data
 

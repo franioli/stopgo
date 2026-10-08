@@ -36,3 +36,10 @@ def test_windows_command_accepts_csv(emlid_csv: Path, tmp_path: Path) -> None:
 def test_unsupported_survey_file(tmp_path: Path) -> None:
     with pytest.raises(SystemExit):
         cli.main(["windows", str(tmp_path / "x.txt")])
+
+
+def test_reader_errors_are_not_reported_as_unsupported(tmp_path: Path) -> None:
+    bad = tmp_path / "bad.csv"
+    bad.write_text("Name\n1001\n")
+    with pytest.raises(KeyError):  # a real error from the reader, not SystemExit
+        cli.main(["windows", str(bad)])
