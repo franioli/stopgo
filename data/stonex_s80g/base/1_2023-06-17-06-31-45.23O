@@ -14,8 +14,8 @@ G    8 C1C L1C D1C S1C C2X L2X D2X S2X                      SYS / # / OBS TYPES
 R    8 C1C L1C D1C S1C C2C L2C D2C S2C                      SYS / # / OBS TYPES 
 E    8 C1X L1X D1X S1X C7X L7X D7X S7X                      SYS / # / OBS TYPES 
 C    8 C2I L2I D2I S2I C7I L7I D7I S7I                      SYS / # / OBS TYPES 
-  2023     6    17     4    35   0.9930000     GPS          TIME OF FIRST OBS   
-  2023     6    17     5     5  59.9890000     GPS          TIME OF LAST OBS    
+  2023     6    17     4    35    0.9930000     GPS         TIME OF FIRST OBS   
+  2023     6    17     5     5   59.9890000     GPS         TIME OF LAST OBS    
 G                                                           SYS / PHASE SHIFT   
 R                                                           SYS / PHASE SHIFT   
 E                                                           SYS / PHASE SHIFT   

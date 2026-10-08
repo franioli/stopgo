@@ -204,18 +204,22 @@ def rinex_span(obs: Path) -> tuple[pd.Timestamp | None, pd.Timestamp | None]:
 
 
 def header_llh(obs: Path) -> tuple[float, float, float]:
-    """WGS84 lat, lon [deg] and ellipsoidal height [m] from a RINEX `APPROX POSITION XYZ`."""
+    """WGS84 lat, lon [deg] and ellipsoidal height [m] of the antenna from the RINEX header.
+
+    Uses `APPROX POSITION XYZ` plus the vertical `ANTENNA: DELTA H/E/N`, if present.
+    """
+    xyz, dh = None, 0.0
     with obs.open() as f:
         for line in f:
             if "APPROX POSITION XYZ" in line:
-                x, y, z = map(float, line[:42].split())
+                xyz = tuple(map(float, line[:42].split()))
+            elif "ANTENNA: DELTA H/E/N" in line:
+                dh = float(line[:14])
+            elif "END OF HEADER" in line:
                 break
-            if "END OF HEADER" in line:
-                raise ValueError(f"no APPROX POSITION XYZ in {obs}")
-        else:
-            raise ValueError(f"no APPROX POSITION XYZ in {obs}")
-    if x == y == z == 0.0:
-        raise ValueError(f"APPROX POSITION XYZ is zero in {obs}")
+    if xyz is None or xyz == (0.0, 0.0, 0.0):
+        raise ValueError(f"no valid APPROX POSITION XYZ in {obs}")
+    x, y, z = xyz
     a, fl = 6378137.0, 1 / 298.257223563
     e2 = fl * (2 - fl)
     p = math.hypot(x, y)
@@ -224,4 +228,4 @@ def header_llh(obs: Path) -> tuple[float, float, float]:
         n = a / math.sqrt(1 - e2 * math.sin(lat) ** 2)
         h = p / math.cos(lat) - n
         lat = math.atan2(z, p * (1 - e2 * n / (n + h)))
-    return math.degrees(lat), math.degrees(math.atan2(y, x)), h
+    return math.degrees(lat), math.degrees(math.atan2(y, x)), h + dh

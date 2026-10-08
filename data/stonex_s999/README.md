@@ -28,6 +28,8 @@ Notes
 - The `.pos` was computed against an Emlid Reach base that is not included. Its heights agree with
   the static ground heights to about 10 cm, i.e. it appears to be already reduced by the antenna height,
   hence `--ant-h 0` (not confirmed against the Emlid Studio settings).
+- Static heights against SONP include the base antenna delta (+0.05 m from the header) and sit about 4-8 cm
+  below the kinematic ones (same effect as in the Emlid sample, cause not identified).
 - The field coordinates in the `.PD` are SINGLE solutions (1-2 m noise): not a quality reference.
 - Expected: the two methods disagree on purpose, which makes the sample useful.
   Kinematic fixes 1001 only (1008, 1009, 1004 are float in the `.pos`); static (120 s windows) fixes 1008 only

@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from . import processing, rtklib, stonex
+from . import emlid, processing, rtklib, stonex
 
 SUMMARY_COLS = [
     "name",
@@ -70,10 +70,17 @@ def _save(df: pd.DataFrame, out: Path | None) -> None:
         print(f"\nwritten {out}", file=sys.stderr)
 
 
+def _read_survey(path: Path) -> pd.DataFrame:
+    """Occupations from a Stonex .PD project or an Emlid .csv export."""
+    readers = {".pd": stonex.read_occupations, ".csv": emlid.read_occupations}
+    try:
+        return readers[path.suffix.lower()](path)
+    except KeyError:
+        raise SystemExit(f"stopgo: unsupported survey file {path} (use .PD or .csv)")
+
+
 def _load_windows(a: argparse.Namespace) -> pd.DataFrame:
-    w = processing.occupation_windows(
-        stonex.read_occupations(a.pd_file), a.trim, a.leap
-    )
+    w = processing.occupation_windows(_read_survey(a.survey), a.trim, a.leap)
     if a.ant_h is not None:
         w["ant_h"] = a.ant_h
     if a.points:
@@ -144,13 +151,15 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="stopgo",
         description="Stop-and-go GNSS post-processing "
-        "with occupation windows from a Stonex Cube-a project.",
+        "with occupation windows from a Stonex Cube-a project or an Emlid Flow export.",
     )
     sub = p.add_subparsers(dest="command", required=True)
 
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument(
-        "pd_file", type=Path, help="Stonex Cube-a project database (Data/*.PD)"
+        "survey",
+        type=Path,
+        help="Stonex Cube-a project database (Data/*.PD) or Emlid Flow point export (.csv)",
     )
     common.add_argument("-o", "--out", type=Path, help="output CSV")
     common.add_argument("--points", nargs="+", help="process only these point names")

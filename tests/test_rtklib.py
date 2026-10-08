@@ -74,8 +74,9 @@ def test_header_llh(tmp_path: Path) -> None:
     f = tmp_path / "b.23O"
     f.write_text("  4355294.7798   738007.0719  4589832.7496"
                  "                  APPROX POSITION XYZ \n"
+                 "        0.0500        0.0000        0.0000                  ANTENNA: DELTA H/E/N\n"
                  "                                                            END OF HEADER       \n")
     lat, lon, h = rtklib.header_llh(f)
     assert lat == pytest.approx(46.28901474, abs=1e-8)
     assert lon == pytest.approx(9.61744532, abs=1e-8)
-    assert h == pytest.approx(3220.0429, abs=1e-3)
+    assert h == pytest.approx(3220.0429 + 0.05, abs=1e-3)  # antenna delta H added
