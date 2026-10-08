@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import subprocess
 import tempfile
 from collections.abc import Mapping, Sequence
@@ -200,3 +201,27 @@ def rinex_span(obs: Path) -> tuple[pd.Timestamp | None, pd.Timestamp | None]:
                 )
                 first = first if first is not None else last
     return first, last
+
+
+def header_llh(obs: Path) -> tuple[float, float, float]:
+    """WGS84 lat, lon [deg] and ellipsoidal height [m] from a RINEX `APPROX POSITION XYZ`."""
+    with obs.open() as f:
+        for line in f:
+            if "APPROX POSITION XYZ" in line:
+                x, y, z = map(float, line[:42].split())
+                break
+            if "END OF HEADER" in line:
+                raise ValueError(f"no APPROX POSITION XYZ in {obs}")
+        else:
+            raise ValueError(f"no APPROX POSITION XYZ in {obs}")
+    if x == y == z == 0.0:
+        raise ValueError(f"APPROX POSITION XYZ is zero in {obs}")
+    a, fl = 6378137.0, 1 / 298.257223563
+    e2 = fl * (2 - fl)
+    p = math.hypot(x, y)
+    lat = math.atan2(z, p * (1 - e2))
+    for _ in range(10):  # fixed-point iteration, converges to sub-mm in a few steps
+        n = a / math.sqrt(1 - e2 * math.sin(lat) ** 2)
+        h = p / math.cos(lat) - n
+        lat = math.atan2(z, p * (1 - e2 * n / (n + h)))
+    return math.degrees(lat), math.degrees(math.atan2(y, x)), h

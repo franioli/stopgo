@@ -68,3 +68,14 @@ def test_solve_static_returns_last_epoch(tmp_path: Path, monkeypatch: pytest.Mon
 def test_run_rnx2rtkp_raises_on_failure(tmp_path: Path) -> None:
     with pytest.raises(RuntimeError):
         rtklib.run_rnx2rtkp(Path("r"), Path("b"), [], rtklib.RtkConfig(), tmp_path / "o.pos", exe="false")
+
+
+def test_header_llh(tmp_path: Path) -> None:
+    f = tmp_path / "b.23O"
+    f.write_text("  4355294.7798   738007.0719  4589832.7496"
+                 "                  APPROX POSITION XYZ \n"
+                 "                                                            END OF HEADER       \n")
+    lat, lon, h = rtklib.header_llh(f)
+    assert lat == pytest.approx(46.28901474, abs=1e-8)
+    assert lon == pytest.approx(9.61744532, abs=1e-8)
+    assert h == pytest.approx(3220.0429, abs=1e-3)

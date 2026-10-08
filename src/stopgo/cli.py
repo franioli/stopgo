@@ -97,9 +97,11 @@ def _rtk_config(
     if a.base_pos:
         cfg = cfg.with_base_llh(*a.base_pos)
     if not cfg.has_base_position:
-        parser.error(
-            "base position missing: use --base-pos or set ant2-pos1..3 in --conf"
-        )
+        try:
+            cfg = cfg.with_base_llh(*rtklib.header_llh(a.base))
+        except (ValueError, OSError) as e:
+            parser.error(f"base position missing ({e}): use --base-pos or --conf")
+        print("base position from RINEX header", file=sys.stderr)
     return cfg
 
 
@@ -185,7 +187,8 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         nargs=3,
         metavar=("LAT", "LON", "H"),
-        help="base antenna position, WGS84 ellipsoidal",
+        help="base antenna position, WGS84 ellipsoidal "
+        "(default: APPROX POSITION XYZ of the base RINEX)",
     )
     sp.add_argument(
         "--conf", type=Path, help="RTKLIB .conf loaded on top of the built-in defaults"
