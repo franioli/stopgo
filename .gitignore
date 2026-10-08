@@ -1,5 +1,6 @@
 __pycache__/
 .venv/
+dist/
 _old/
 
 # sample data: parked originals and RINEX files too large for git

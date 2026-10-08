@@ -1,9 +1,25 @@
 [project]
 name = "stopgo"
 version = "0.1.0"
-description = "Stop-and-go GNSS post-processing with RTKLIB and Stonex Cube-a projects"
+description = "Stop-and-go GNSS post-processing with RTKLIB: per-point coordinates from Stonex and Emlid surveys"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Francesco Ioli", email = "frency.ioli@gmail.com" }]
+keywords = ["gnss", "gps", "rtk", "rtklib", "surveying", "stop-and-go", "stonex", "emlid"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Programming Language :: Python :: 3",
+    "Typing :: Typed",
+]
 requires-python = ">=3.10"
 dependencies = ["numpy", "pandas>=2"]
+
+[project.urls]
+Repository = "https://github.com/franioli/stopgo"
+Issues = "https://github.com/franioli/stopgo/issues"
 
 [project.scripts]
 stopgo = "stopgo.cli:main"
@@ -14,6 +30,9 @@ dev = ["pytest"]
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "tests", "README.md", "LICENSE"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

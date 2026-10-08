@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from . import emlid, processing, rtklib, stonex
+from . import __version__, emlid, processing, rtklib, stonex
 
 SUMMARY_COLS = [
     "name",
@@ -153,6 +153,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Stop-and-go GNSS post-processing "
         "with occupation windows from a Stonex Cube-a project or an Emlid Flow export.",
     )
+    p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = p.add_subparsers(dest="command", required=True)
 
     common = argparse.ArgumentParser(add_help=False)
