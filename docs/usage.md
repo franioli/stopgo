@@ -64,6 +64,28 @@ it; the result is the last epoch of the forward filter. Windows not covered by a
   is only approximate. The base file does not need to cover more than the survey span, so trimmed files are fine.
 - **Navigation.** Pass every nav file needed for the systems you use (base and rover nav can be mixed).
 
+### Multiple input files
+
+`--rover` and `--nav` accept any number of files; `--base` takes exactly one. `stopgo` does not expand wildcards
+itself: let the shell do it (quote nothing, so the pattern is expanded), or list the files explicitly.
+
+```sh
+# several rover sessions + one nav file per constellation/receiver
+stopgo static survey.PD --rover rover/*.23O --base base/base.23O --nav base/*.23[NPGLH] rover/*.nav
+
+# brace expansion for a few named files
+stopgo static survey.PD --rover rover/{am,pm}.obs --base base.obs --nav base.nav rover.nav
+```
+
+- **Rover files are alternatives, not a concatenation.** Each window is solved on the first file (in the order
+  given) whose time span fully covers it, so a window straddling two files gets "no rover data". Merge such files
+  first (e.g. with `gfzrnx` or RTKLIB `convbin`).
+- **Nav files are all passed to every run.** Order does not matter. Use a merged broadcast file (e.g. `BRDC`) or
+  one file per system; a missing system silently yields no satellites of that system.
+- **Argument order.** Options with several values (`--rover`, `--nav`, `--points`) consume everything up to the
+  next option, so put the survey file first, as above, or end the list with another option.
+- Check which file was used per point in the `source` output column.
+
 ### RTKLIB options
 
 Built-in defaults: static mode, L1+L2, forward filter, 15 deg mask, GPS+Galileo+BeiDou, broadcast iono and
@@ -85,6 +107,9 @@ They are layered, later ones win:
 | `--opt` | any | `--opt pos1-tropopt=est-ztd` |
 
 `--save-conf FILE` writes the effective configuration so a run can be reproduced with plain `rnx2rtkp`.
+Any RTKLIB `.conf` key is valid for `--opt`/`--conf`; use `--save-conf` once to see all keys and their effective
+values. Typical static tweaks: `--opt pos2-armode=fix-and-hold`, `--opt pos1-tropopt=est-ztd` (long baselines),
+`--opt pos1-ionoopt=dual-freq` (very long baselines), `--arthres 2` / `--elmask 10` (more fixes, less strict).
 `--exe PATH` selects a specific `rnx2rtkp` binary. The `--systems` choice must match what the rover tracks
 (e.g. the Stonex S80G has no Galileo/BeiDou, so use `--systems GR`).
 
@@ -137,9 +162,9 @@ cfg = (
     .updated({"pos1-navsys": rtklib.navsys_mask("GR")})
     .with_base_llh(*rtklib.header_llh(base))
 )
-res = processing.process_static(
-    w, [Path("rover/rover.23O")], base, [Path("base/base.23P")], cfg, progress=print
-)
+rovers = sorted(Path("rover").glob("*.23O"))  # several files: expand globs yourself
+navs = sorted(Path("base").glob("*.23P")) + sorted(Path("rover").glob("*.nav"))
+res = processing.process_static(w, rovers, base, navs, cfg, progress=print)
 
 res = processing.add_ground_and_checks(res, w)  # h_ground, d2d_field, dh_field
 ```
