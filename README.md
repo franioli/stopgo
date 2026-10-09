@@ -37,7 +37,8 @@ stopgo static  survey.PD --rover rover.obs --base base.obs --nav base.nav rover.
 you pass `--base-pos`. Shared options: `--points`, `--trim`, `--ant-h`, `--leap`, `-o out.csv`.
 
 The full guide (every option, RTKLIB settings, output columns, Python API, troubleshooting) is in
-[docs/usage.md](docs/usage.md).
+[docs/usage.md](docs/usage.md). RTKLIB parameters, `convbin` conversions and RINEX trimming/merging are in
+[docs/rtklib-guide.md](docs/rtklib-guide.md).
 
 ## Other receivers
 
